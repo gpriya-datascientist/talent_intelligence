@@ -1,5 +1,14 @@
 # talent_intelligence
 
+
+config.py
+What it does step by step:
+BaseSettings from pydantic-settings reads every value from your .env file and validates the type automatically. So if ANTHROPIC_API_KEY is missing, the app crashes at startup with a clear error — not silently at runtime when you first make an LLM call. Every setting has a type annotation (str, float, Literal["faiss", "pinecone"]) so wrong values are caught immediately.
+The ranking weights (WEIGHT_SKILL_MATCH, WEIGHT_RECENCY etc.) live here deliberately — not hardcoded in the ranking logic. This means you can tune the scoring model by changing one line in .env without touching code.
+@lru_cache on get_settings() means the settings object is created exactly once when the app starts and reused everywhere. Without it, Python would re-read and re-parse the .env file on every single function call that needs a config value.
+How to talk about it in an interview:
+"I used pydantic-settings for config management so all environment variables are type-validated at startup. The app fails fast with a clear error if something is missing rather than failing silently mid-request. I also cached the settings object with lru_cache to avoid re-parsing the env file on every access. Ranking weights are config values not constants — so I can tune the scoring model without a code change or redeployment."
+
 config.py explanation
 # Pydantic `config.py` Complete Cheat Sheet
 
