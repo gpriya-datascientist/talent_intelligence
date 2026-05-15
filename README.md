@@ -1,3 +1,4 @@
+![Alt text](ai_talent_intelligence_wish_to_team.svg)
 # AI Talent Intelligence Platform — Wish-to-Team
 
 An AI-powered platform that transforms a Product Owner's natural language "wish" into a fully assembled, role-matched team — automatically.
