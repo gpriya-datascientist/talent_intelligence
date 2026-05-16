@@ -1,0 +1,22 @@
+# Use --prefer-binary to get pre-built wheels only, no compilation
+streamlit
+pandas
+numpy
+python-dotenv
+sentence-transformers
+openai
+tiktoken
+openpyxl
+xlrd
+pyarrow
+plotly
+altair
+scikit-learn
+statsmodels
+APScheduler
+uvicorn
+httpx
+pydantic
+loguru
+rich
+tenacity

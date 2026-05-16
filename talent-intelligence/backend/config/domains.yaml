@@ -1,0 +1,26 @@
+# domains.yaml — maps detected project domains to required SME types
+# The domain_router uses this as a fast-path before calling the LLM
+
+domain_to_sme:
+  audio_dsp: "audio_dsp"
+  embedded_systems: "embedded_systems"
+  ux_design: "ux_design"
+  machine_learning: "ml_engineering"
+  security: "security"
+  compliance: "security"
+  data_engineering: "data_engineering"
+  mobile: "mobile_engineering"
+  blockchain: "blockchain"
+
+# Domains that always require SME consultation before matching
+always_consult:
+  - audio_dsp
+  - embedded_systems
+  - blockchain
+  - compliance
+
+# Domains where SMEs can be consulted in parallel
+parallel_allowed:
+  - ux_design
+  - security
+  - data_engineering

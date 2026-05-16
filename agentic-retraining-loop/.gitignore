@@ -1,0 +1,84 @@
+# ── Environment ────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python ─────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.Python
+
+# ── Virtual environments ────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# ── Data — keep sample/, ignore real pipeline data ─────────────
+data/raw/
+data/processed/
+data/exports/
+!data/sample/
+!data/sample/**
+
+# ── ML Artifacts ───────────────────────────────────────────────
+data/models/retrained_*
+data/models/*.tmp
+mlruns/
+mlartifacts/
+
+# ── Database ───────────────────────────────────────────────────
+*.sqlite
+*.db
+*.db-shm
+*.db-wal
+alembic.ini.local
+
+# ── Logs ───────────────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+
+# ── Testing & Coverage ─────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# ── Type checking ──────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+.pyright/
+.ruff_cache/
+
+# ── IDEs ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Jupyter ────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Secrets ────────────────────────────────────────────────────
+*.pem
+*.key
+secrets/

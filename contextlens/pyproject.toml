@@ -1,0 +1,17 @@
+[project]
+name = "contextlens"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+[project.dependencies]
+streamlit = ">=1.35"
+plotly = ">=5.22"
+openai = ">=1.30"
+numpy = ">=1.26"
+python-dotenv = ">=1.0"
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.ruff]
+line-length = 100
