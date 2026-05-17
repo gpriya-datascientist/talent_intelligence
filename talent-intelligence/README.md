@@ -1,16 +1,18 @@
-# 🧠 AI Talent Intelligence Platform — Wish-to-Team
+#  AI Talent Intelligence Platform — Wish-to-Team
+
+![Alt text](ai_talent_intelligence_wish_to_team.svg)
 
 An AI-powered platform that transforms a Product Owner's natural language "wish" into a fully assembled, role-matched team — automatically.
 
 ---
 
-## 🚀 Overview
+## Overview
 
 The **Wish-to-Team** system bridges the gap between high-level product ideas and the right human talent. A Product Owner simply writes a wish or idea in natural language, and the platform intelligently decomposes it into tasks, identifies required skills, and matches the best candidates to form an optimal team.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 The platform is built as a multi-layer AI pipeline:
 
@@ -52,17 +54,17 @@ The platform is built as a multi-layer AI pipeline:
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
-- 🗣️ **Natural Language Input** — No forms or structured data needed from the PO
-- 🤖 **LLM-Powered Reasoning** — Multiple AI agents handle parsing, scoring, and composition
-- 🧩 **Multi-Domain Support** — Frontend, Backend, and Data/ML tracks
-- 📊 **Skill Gap Analysis** — Highlights gaps for hiring or upskilling
-- ⚡ **End-to-End Automation** — From wish to team in one pipeline
+-  **Natural Language Input** — No forms or structured data needed from the PO
+-  **LLM-Powered Reasoning** — Multiple AI agents handle parsing, scoring, and composition
+-  **Multi-Domain Support** — Frontend, Backend, and Data/ML tracks
+-  **Skill Gap Analysis** — Highlights gaps for hiring or upskilling
+-  **End-to-End Automation** — From wish to team in one pipeline
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -78,7 +80,7 @@ The platform is built as a multi-layer AI pipeline:
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 talent-intelligence/
@@ -107,7 +109,7 @@ talent-intelligence/
 
 ---
 
-## 🚦 Getting Started
+##  Getting Started
 
 ### Prerequisites
 - Python 3.11+
@@ -170,14 +172,7 @@ Frontend → `http://localhost:3000`
 
 Copy `.env.example` to `.env` and fill in:
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | ✅ | `postgresql+asyncpg://postgres:PASSWORD@localhost:5432/talent_db` |
-| `OPENAI_API_KEY` | ✅ | OpenAI key — used for LLM chains and embeddings |
-| `OPENAI_MODEL` | ❌ | Default: `gpt-4o-mini` |
-| `EMBEDDING_MODEL` | ❌ | Default: `text-embedding-3-small` |
-| `GITHUB_TOKEN` | ❌ | For real GitHub profile syncing |
-| `LANGFUSE_PUBLIC_KEY` | ❌ | LLM observability via Langfuse |
+
 
 ---
 
