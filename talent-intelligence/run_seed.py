@@ -1,9 +1,14 @@
 """
-run_seed.py — one-time script to populate the database with fake employees.
+run_seed.py — populates the database with fake employees.
 Run from project root: python run_seed.py
 """
 import asyncio
+import sys
 import uuid
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from backend.db.database import AsyncSessionLocal, init_db
 from backend.models.employee import Employee, SeniorityLevel, EmploymentType
 from backend.models.skill import Skill, SkillType, SkillSource, ProficiencyLevel
@@ -14,6 +19,7 @@ from backend.ingestion.seed_data import generate_employees
 async def seed():
     print("Initializing database tables...")
     await init_db()
+    print("Tables created.")
 
     print("Generating fake employees...")
     employees = generate_employees(count_per_persona=3)
@@ -21,7 +27,6 @@ async def seed():
 
     async with AsyncSessionLocal() as db:
         for emp_data in employees:
-            # Create employee
             emp = Employee(
                 id=emp_data["id"],
                 email=emp_data["email"],
@@ -39,7 +44,6 @@ async def seed():
             )
             db.add(emp)
 
-            # Create skills
             for s in emp_data.get("skills", []):
                 skill = Skill(
                     id=str(uuid.uuid4()),
@@ -55,7 +59,6 @@ async def seed():
                 )
                 db.add(skill)
 
-            # Create availability
             avail_data = emp_data.get("availability", {})
             avail = Availability(
                 id=str(uuid.uuid4()),
@@ -68,7 +71,8 @@ async def seed():
             db.add(avail)
 
         await db.commit()
-        print(f"✅ Successfully seeded {len(employees)} employees with skills and availability.")
+        print(f"Seeded {len(employees)} employees with skills and availability.")
+        print("Done! Check talent_db in HeidiSQL.")
 
 
 if __name__ == "__main__":

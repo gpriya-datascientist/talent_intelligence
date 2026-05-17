@@ -1,27 +1,26 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
+import Login from './pages/Login'
 import PODashboard from './pages/PODashboard'
 import EmployeeDashboard from './pages/EmployeeDashboard'
 
-function Nav() {
-  return (
-    <nav className="bg-gray-900 border-b border-gray-800 px-8 py-4 flex gap-6">
-      <span className="font-bold text-blue-400 mr-4">🧠 Talent Intelligence</span>
-      <Link to="/" className="text-gray-300 hover:text-white text-sm">Product Owner</Link>
-      <Link to="/employee" className="text-gray-300 hover:text-white text-sm">My Availability</Link>
-    </nav>
-  )
+function ProtectedRoute({ children, role }: { children: React.ReactNode, role: string }) {
+  const user = JSON.parse(localStorage.getItem('ti_user') || 'null')
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== role) return <Navigate to={user.role === 'po' ? '/' : '/employee'} replace />
+  return <>{children}</>
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Nav />
       <Routes>
-        <Route path="/" element={<PODashboard />} />
-        <Route path="/employee" element={<EmployeeDashboard />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<ProtectedRoute role="po"><PODashboard /></ProtectedRoute>} />
+        <Route path="/employee" element={<ProtectedRoute role="employee"><EmployeeDashboard /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

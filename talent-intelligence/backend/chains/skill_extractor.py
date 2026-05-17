@@ -1,8 +1,8 @@
 """
 skill_extractor.py — LCEL chain that extracts structured skills from
-resume text + GitHub stats. Core of the AI extraction engine.
+resume text + GitHub stats using OpenAI.
 """
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
@@ -10,25 +10,23 @@ from typing import Optional
 from backend.config import settings
 
 
-# ── Output schema ──────────────────────────────────────────────────────────────
 class ExtractedSkill(BaseModel):
     name: str = Field(description="Skill name, normalized e.g. 'python', 'react', 'dsp'")
     skill_type: str = Field(description="One of: technical, domain, tool, soft")
     proficiency: str = Field(description="One of: beginner, intermediate, advanced, expert")
     is_hands_on: bool = Field(description="True if used in real project/commit, False if resume mention only")
-    last_used_year: Optional[int] = Field(default=None, description="Most recent year this skill was used")
-    years_experience: Optional[float] = Field(default=None, description="Estimated years of experience")
+    last_used_year: Optional[int] = Field(default=None)
+    years_experience: Optional[float] = Field(default=None)
     evidence: str = Field(description="The exact text or signal that led to this extraction")
-    confidence: float = Field(ge=0.0, le=1.0, description="Extraction confidence score")
+    confidence: float = Field(ge=0.0, le=1.0)
 
 
 class ExtractionResult(BaseModel):
     skills: list[ExtractedSkill]
     overall_confidence: float = Field(ge=0.0, le=1.0)
-    extraction_notes: Optional[str] = Field(default=None, description="Any notable observations")
+    extraction_notes: Optional[str] = Field(default=None)
 
 
-# ── Prompt ─────────────────────────────────────────────────────────────────────
 SKILL_EXTRACTOR_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """You are an expert technical recruiter and skills analyst.
 Extract ALL skills from the provided resume text and GitHub activity data.
@@ -41,21 +39,15 @@ Rules:
 - confidence reflects how clearly the skill is evidenced
 
 {format_instructions}"""),
-    ("human", """Resume text:
-{resume_text}
-
-GitHub stats:
-{github_stats}
-
-Extract all skills from the above."""),
+    ("human", "Resume text:\n{resume_text}\n\nGitHub stats:\n{github_stats}\n\nExtract all skills."),
 ])
 
 
 def build_skill_extractor_chain():
-    llm = ChatAnthropic(
-        model=settings.ANTHROPIC_MODEL,
-        api_key=settings.ANTHROPIC_API_KEY,
-        max_tokens=settings.ANTHROPIC_MAX_TOKENS,
+    llm = ChatOpenAI(
+        model=settings.OPENAI_MODEL,
+        api_key=settings.OPENAI_API_KEY,
+        max_tokens=settings.OPENAI_MAX_TOKENS,
         temperature=0.0,
     )
     parser = PydanticOutputParser(pydantic_object=ExtractionResult)

@@ -1,29 +1,27 @@
 """
-requirement_builder.py — merges parsed wish + SME inputs into
-a structured requirements document fed into RAG + ranking.
+requirement_builder.py — merges wish + SME inputs into structured requirements.
 """
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
-from typing import Optional
 from backend.config import settings
 
 
 class SkillRequirement(BaseModel):
     skill: str
-    proficiency: str  # beginner/intermediate/advanced/expert
+    proficiency: str
     hands_on_required: bool
-    is_mandatory: bool  # must-have vs nice-to-have
+    is_mandatory: bool
 
 
 class TeamRequirement(BaseModel):
     must_have_skills: list[SkillRequirement]
     nice_to_have_skills: list[SkillRequirement]
     team_size: int = Field(ge=1, le=20)
-    seniority_mix: dict = Field(description="e.g. {'senior': 1, 'mid': 2}")
-    domain_constraints: list[str] = Field(description="Hard constraints from SME inputs")
-    search_query: str = Field(description="Optimized semantic search query for vector retrieval")
+    seniority_mix: dict
+    domain_constraints: list[str]
+    search_query: str = Field(description="Rich semantic search query for vector retrieval")
 
 
 REQUIREMENT_BUILDER_PROMPT = ChatPromptTemplate.from_messages([
@@ -35,20 +33,15 @@ The search_query field is critical — it will be embedded and used for
 semantic vector search. Make it rich with specific technical terms.
 
 {format_instructions}"""),
-    ("human", """Project intent: {intent}
-Detected domains: {domains}
-SME inputs: {sme_inputs}
-Ambiguities resolved: {resolved_ambiguities}
-
-Build the team requirement."""),
+    ("human", "Project intent: {intent}\nDetected domains: {domains}\nSME inputs: {sme_inputs}\nAmbiguities resolved: {resolved_ambiguities}\n\nBuild the team requirement."),
 ])
 
 
 def build_requirement_builder_chain():
-    llm = ChatAnthropic(
-        model=settings.ANTHROPIC_MODEL,
-        api_key=settings.ANTHROPIC_API_KEY,
-        max_tokens=settings.ANTHROPIC_MAX_TOKENS,
+    llm = ChatOpenAI(
+        model=settings.OPENAI_MODEL,
+        api_key=settings.OPENAI_API_KEY,
+        max_tokens=settings.OPENAI_MAX_TOKENS,
         temperature=0.1,
     )
     parser = PydanticOutputParser(pydantic_object=TeamRequirement)

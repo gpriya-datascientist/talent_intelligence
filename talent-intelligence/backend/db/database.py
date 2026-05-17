@@ -2,12 +2,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 from typing import AsyncGenerator
+import asyncio
+import sys
+
 from backend.config import settings
 
+# Fix Windows asyncpg event loop issue
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-# NullPool and pool_size/max_overflow are mutually exclusive.
-# Use NullPool in development (no persistent connections),
-# use pool_size/max_overflow in staging/production.
 if settings.ENV == "development":
     engine = create_async_engine(
         settings.DATABASE_URL,
@@ -50,12 +53,13 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Create all tables on startup (dev only — use Alembic in prod)."""
+    """Create all tables on startup."""
+    from backend.models import employee, skill, availability, wish  # noqa
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
 async def drop_db() -> None:
-    """Drop all tables — used in tests only."""
+    """Drop all tables — tests only."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
