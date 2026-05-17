@@ -1,137 +1,31 @@
-# ── Environment & API Keys — NEVER commit ──
-.env
-.env.local
-.env.development
-.env.production
-.env.staging
-.env.*
-
-# ── Virtual Environment ──
+# Python
 venv/
-.venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-
-# ── Database Files ──
-*.db
-*.sqlite
-*.sqlite3
-talent_dev.db
-
-# ── Python Cache ──
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
-*.pycache
+.Python
 *.egg-info/
-dist/
-build/
-*.egg
-.eggs/
 
-# ── Jupyter Notebooks ──
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-profile_default/
-ipython_config.py
+# Environment — NEVER commit
+.env
+.env.*
+!.env.example
 
-# ── Data Folder (may contain sensitive files) ──
+# Data & indexes
 data/
-*.csv
-*.xlsx
-*.xls
-*.parquet
-*.feather
+*.db
 
-# ── Model Files (large binaries) ──
-*.pkl
-*.pickle
-*.h5
-*.hdf5
-*.model
-*.bin
-*.pt
-*.pth
-*.onnx
-models/
-
-# ── Credentials & Secrets ──
-credentials.json
-secrets.py
-config_secret.py
-*_key.json
-*.pem
-*.key
-*.p12
-*.pfx
-service_account.json
-
-# ── Node Modules (Frontend) ──
-node_modules/
+# Node
 frontend/node_modules/
-
-# ── Build Output ──
 frontend/dist/
-frontend/build/
-*.min.js
-*.min.css
 
-# ── Logs ──
-*.log
-logs/
-log/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# ── Docker ──
-.docker/
-docker-compose.override.yml
-
-# ── Testing & Coverage ──
-.pytest_cache/
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-nosetests.xml
-test-results/
-
-# ── OS Files ──
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# ── IDE & Editors ──
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 
-# ── Temporary Files ──
-*.tmp
-*.bak
-*.orig
-*.rej
-tmp/
-temp/
+# OS
+.DS_Store
+Thumbs.db
 
-# ── Anthropic / OpenAI specific ──
-anthropic_key*
-openai_key*
-claude_key*
-*_api_key*
+# Logs
+*.log
