@@ -374,8 +374,11 @@ async def _send_sme_email(wish_text: str, sme_domains: list) -> None:
 
     def send_sync():
         try:
-            username     = "gurupriyasridhar0206@gmail.com"
-            app_password = "izmosuantjlqjjro"
+            username     = settings.SMTP_USER
+            app_password = settings.SMTP_PASSWORD
+            if not username or not app_password:
+                logger.warning("SMTP credentials not configured in .env")
+                return False
             domains_str  = ", ".join(sme_domains)
 
             msg = MIMEMultipart("alternative")

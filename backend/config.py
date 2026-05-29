@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     LANGFUSE_SECRET_KEY: str = ""
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"
 
+    # SMTP Email
+    SMTP_USER:     str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_HOST:     str = "smtp.gmail.com"
+    SMTP_PORT:     int = 587
+
     # n8n automation
     N8N_WEBHOOK_URL: str = "http://localhost:5678"
     N8N_API_KEY: str = ""
