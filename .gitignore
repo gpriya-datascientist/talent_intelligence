@@ -1,0 +1,58 @@
+# Environment variables - NEVER push these
+.env
+.env.*
+*.env
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# FAISS index (large binary files)
+faiss_index/
+*.faiss
+*.pkl
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+frontend/build/
+*.egg-info/
+dist/
+build/
+
+# Uploaded files
+uploads/
+temp/
+tmp/
+
+# Test files
+test_*.py
+check_*.py

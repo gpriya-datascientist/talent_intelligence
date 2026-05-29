@@ -1,0 +1,15 @@
+# domains.yaml — only truly niche domains require SME consultation
+
+domain_to_sme:
+  audio_dsp: "audio_dsp"
+  blockchain: "blockchain"
+  compliance: "compliance"
+
+# Domains that always require SME consultation
+always_consult:
+  - audio_dsp
+  - blockchain
+  - compliance
+
+parallel_allowed:
+  - audio_dsp
