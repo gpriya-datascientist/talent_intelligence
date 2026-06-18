@@ -31,6 +31,55 @@ class GithubUpdateRequest(BaseModel):
     github_username: str
 
 
+class PocLinkRequest(BaseModel):
+    title:       str
+    url:         str
+    link_type:   str = "gitlab"  # gitlab, confluence, portfolio, demo, other
+    description: Optional[str] = None
+
+
+# ── POC LINKS ─────────────────────────────────────────────────────────────
+@router.post("/{employee_id}/poc-links")
+async def add_poc_link(
+    employee_id: str,
+    body: PocLinkRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    emp = await db.get(Employee, employee_id)
+    if not emp:
+        raise HTTPException(404, "Employee not found")
+
+    existing = emp.poc_links or []
+    existing.append({
+        "title":       body.title,
+        "url":         body.url,
+        "type":        body.link_type,
+        "description": body.description,
+        "added_at":    datetime.now(timezone.utc).isoformat(),
+    })
+    emp.poc_links = existing
+    await db.commit()
+    return {"status": "added", "poc_links": emp.poc_links}
+
+
+@router.delete("/{employee_id}/poc-links/{link_index}")
+async def remove_poc_link(
+    employee_id: str,
+    link_index: int,
+    db: AsyncSession = Depends(get_db),
+):
+    emp = await db.get(Employee, employee_id)
+    if not emp:
+        raise HTTPException(404, "Employee not found")
+    existing = emp.poc_links or []
+    if link_index < 0 or link_index >= len(existing):
+        raise HTTPException(400, "Invalid link index")
+    existing.pop(link_index)
+    emp.poc_links = existing
+    await db.commit()
+    return {"status": "removed", "poc_links": emp.poc_links}
+
+
 # ── GET by email ──────────────────────────────────────────────────────────
 @router.get("/by-email/{email}")
 async def get_employee_by_email(email: str, db: AsyncSession = Depends(get_db)):
@@ -337,6 +386,7 @@ async def _build_employee_response(emp: Employee, db: AsyncSession) -> dict:
         "sme_domains":    emp.sme_domains or [],
         "github_username":emp.github_username,
         "github_stats":   emp.github_stats,
+        "poc_links":      emp.poc_links or [],
         "resume_text":    emp.resume_text,
         "resume_uploaded_at": emp.resume_uploaded_at.isoformat() if emp.resume_uploaded_at else None,
         "skills": [

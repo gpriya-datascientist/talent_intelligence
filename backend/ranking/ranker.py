@@ -22,13 +22,20 @@ class RankedCandidate:
     retrieval_score:   float
     matched_skills:    list
     is_backup:         bool = False
+    capacity_hours:    float = 0.0
+    start_date_ok:     bool = True
+    capacity_score:    float = 1.0
+    start_date_score:  float = 1.0
 
 
 async def rank_candidates_from_db(
     retrieved_candidates: list[dict],
     requirements: dict,
     db: AsyncSession,
-    project_start_date=None,
+    project_start_date: str = None,
+    duration_months: int = 3,
+    total_hours: int = 160,
+    role_split: dict = None,
 ) -> list[RankedCandidate]:
     """
     FIXED version — fetches full employee records from DB.
@@ -91,11 +98,64 @@ async def rank_candidates_from_db(
         github_score         = compute_github_activity_score(github_stats)
         retrieval_score      = candidate.get("retrieval_score", 0.5)
 
+        # POC links boost — private GitLab/Confluence counts as evidence
+        poc_links   = emp.poc_links or []
+        poc_score   = min(len(poc_links) * 0.25, 0.75) if poc_links else 0.0
+        # Blend github_score with poc_score — take the best of the two
+        github_poc_score = max(github_score, poc_score)
+
+        # Capacity score — can this person handle the required hours?
+        avail_pct      = avail_dict.get("available_percentage", 1.0)
+        capacity_hrs   = avail_pct * duration_months * 80  # 80hrs/month
+        hrs_per_person = total_hours / max(requirements.get("team_size", 3), 1)
+        capacity_score = min(capacity_hrs / max(hrs_per_person, 1), 1.0)
+
+        # Start date score — is person available by project start?
+        start_date_ok    = True
+        start_date_score = 1.0
+        if project_start_date:
+            from datetime import datetime, timezone
+            free_from = avail_dict.get("free_from_date")
+            if free_from:
+                try:
+                    # Parse project start date
+                    if isinstance(project_start_date, str):
+                        start_dt = datetime.fromisoformat(project_start_date.split('T')[0]).replace(tzinfo=timezone.utc)
+                    else:
+                        start_dt = project_start_date.replace(tzinfo=timezone.utc) if project_start_date.tzinfo is None else project_start_date
+
+                    # Parse free_from_date
+                    if isinstance(free_from, str):
+                        free_dt = datetime.fromisoformat(free_from.split('T')[0]).replace(tzinfo=timezone.utc)
+                    elif hasattr(free_from, 'tzinfo'):
+                        free_dt = free_from if free_from.tzinfo else free_from.replace(tzinfo=timezone.utc)
+                    else:
+                        free_dt = datetime.fromisoformat(str(free_from)).replace(tzinfo=timezone.utc)
+
+                    days_late = (free_dt - start_dt).days
+                    if days_late <= 0:
+                        start_date_score = 1.0
+                        start_date_ok    = True
+                    elif days_late <= 14:
+                        start_date_score = 0.7
+                        start_date_ok    = True
+                    elif days_late <= 30:
+                        start_date_score = 0.4
+                        start_date_ok    = False
+                    else:
+                        start_date_score = 0.1
+                        start_date_ok    = False
+                except Exception:
+                    pass  # keep defaults if parsing fails
+
+        # Updated scoring formula with capacity, start date and POC boost
         final_score = (
-            skill_score     * settings.WEIGHT_SKILL_MATCH +
-            retrieval_score * settings.WEIGHT_RECENCY +
-            github_score    * settings.WEIGHT_GITHUB_ACTIVITY +
-            avail_score     * settings.WEIGHT_AVAILABILITY
+            skill_score      * 0.35 +
+            retrieval_score  * 0.15 +
+            github_poc_score * 0.15 +
+            avail_score      * 0.10 +
+            capacity_score   * 0.15 +
+            start_date_score * 0.10
         )
 
         scored.append(RankedCandidate(
@@ -107,6 +167,10 @@ async def rank_candidates_from_db(
             github_score=float(github_score),
             retrieval_score=float(retrieval_score),
             matched_skills=matched,
+            capacity_hours=float(round(capacity_hrs, 1)),
+            start_date_ok=start_date_ok,
+            capacity_score=float(capacity_score),
+            start_date_score=float(start_date_score),
         ))
 
     scored.sort(key=lambda x: x.final_score, reverse=True)

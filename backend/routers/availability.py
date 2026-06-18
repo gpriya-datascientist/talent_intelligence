@@ -35,7 +35,10 @@ async def update_availability(
     db: AsyncSession = Depends(get_db),
 ):
     # ── Update availability record ─────────────────────────────────
-    avail = await db.get(Availability, employee_id)
+    result = await db.execute(
+        select(Availability).where(Availability.employee_id == employee_id)
+    )
+    avail = result.scalar_one_or_none()
     if not avail:
         avail = Availability(id=str(uuid.uuid4()), employee_id=employee_id)
         db.add(avail)
@@ -82,6 +85,7 @@ async def update_availability(
 
             await db.flush()
 
+    await db.commit()
     return {
         "employee_id": employee_id,
         "availability_score": avail.availability_score,

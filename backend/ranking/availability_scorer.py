@@ -5,11 +5,7 @@ Also handles future availability boosting for time-aware matching.
 from datetime import datetime, timezone
 
 
-def compute_availability_score(availability: dict, project_start_date: datetime = None) -> float:
-    """
-    Converts availability record to a 0.0-1.0 ranking signal.
-    Considers: status, percentage, free_from_date, project start date.
-    """
+def compute_availability_score(availability: dict, project_start_date=None) -> float:
     status = availability.get("status", "available")
 
     if status == "on_leave":
@@ -21,17 +17,29 @@ def compute_availability_score(availability: dict, project_start_date: datetime 
     else:
         base = availability.get("available_percentage", 0.5)
 
-    # Boost if employee becomes free before the project starts
     free_from = availability.get("free_from_date")
     if free_from:
+        # Normalize free_from to datetime
         if isinstance(free_from, str):
-            free_from = datetime.fromisoformat(free_from)
+            free_from_dt = datetime.fromisoformat(free_from.split('T')[0]).replace(tzinfo=timezone.utc)
+        elif hasattr(free_from, 'tzinfo'):
+            free_from_dt = free_from if free_from.tzinfo else free_from.replace(tzinfo=timezone.utc)
+        else:
+            free_from_dt = datetime.fromisoformat(str(free_from)).replace(tzinfo=timezone.utc)
+
         now = datetime.now(timezone.utc)
-        days_until_free = (free_from.replace(tzinfo=timezone.utc) - now).days
+        days_until_free = (free_from_dt - now).days
 
         if project_start_date:
-            if free_from <= project_start_date:
-                # Will be free before project starts — treat as available
+            # Normalize project_start_date to datetime
+            if isinstance(project_start_date, str):
+                start_dt = datetime.fromisoformat(project_start_date.split('T')[0]).replace(tzinfo=timezone.utc)
+            elif hasattr(project_start_date, 'tzinfo'):
+                start_dt = project_start_date if project_start_date.tzinfo else project_start_date.replace(tzinfo=timezone.utc)
+            else:
+                start_dt = datetime.fromisoformat(str(project_start_date)).replace(tzinfo=timezone.utc)
+
+            if free_from_dt <= start_dt:
                 return min(base + 0.4, 1.0)
         elif days_until_free <= 14:
             base = min(base + 0.3, 1.0)

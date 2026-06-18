@@ -44,16 +44,15 @@ def get_langfuse_handler(trace_name: str, wish_id: str = None, metadata: dict = 
     if not LANGFUSE_AVAILABLE or not settings.LANGFUSE_PUBLIC_KEY:
         return None
     try:
-        return _CB_cls(
+        # Try minimal init — no extra kwargs that might fail
+        handler = _CB_cls(
             public_key=settings.LANGFUSE_PUBLIC_KEY,
             secret_key=settings.LANGFUSE_SECRET_KEY,
             host=settings.LANGFUSE_HOST,
-            trace_name=trace_name,
-            session_id=wish_id,
-            metadata={"wish_id": wish_id, **(metadata or {})},
         )
+        return handler
     except Exception as e:
-        logger.warning(f"Langfuse handler: {e}")
+        logger.warning(f"Langfuse handler failed: {e}")
         return None
 
 

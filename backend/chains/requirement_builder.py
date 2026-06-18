@@ -51,6 +51,9 @@ IMPORTANT RULES:
 Detected domains: {domains}
 SME inputs: {sme_inputs}
 Ambiguities resolved: {resolved_ambiguities}
+Project duration: {duration_months} months
+Total hours budget: {total_hours} hours
+Minimum team size based on hours: {min_team_size} people
 
 Build the team requirement. Remember: team_size max 3, search_query must use specific tool names."""),
 ])
@@ -76,24 +79,33 @@ async def build_requirements(
     sme_inputs: dict,
     resolved_ambiguities: dict = None,
     wish_id: str = None,
+    duration_months: int = 3,
+    total_hours: int = 160,
 ) -> TeamRequirement:
     chain = build_requirement_builder_chain()
 
-    # ── Langfuse tracing ─────────────────────────────────────────────────
     handler = get_langfuse_handler(
         trace_name="requirement_builder",
         wish_id=wish_id,
         metadata={
-            "domains":    domains,
-            "has_sme":    bool(sme_inputs),
-            "sme_domains": list(sme_inputs.keys()),
+            "domains":         domains,
+            "has_sme":         bool(sme_inputs),
+            "duration_months": duration_months,
+            "total_hours":     total_hours,
         },
     )
     config = {"callbacks": [handler]} if handler else {}
+
+    # Calculate min team size from hours
+    hrs_per_person = duration_months * 80
+    min_team = max(1, round(total_hours / hrs_per_person))
 
     return await chain.ainvoke({
         "intent":               intent,
         "domains":              ", ".join(domains),
         "sme_inputs":           str(sme_inputs),
         "resolved_ambiguities": str(resolved_ambiguities or {}),
+        "duration_months":      duration_months,
+        "total_hours":          total_hours,
+        "min_team_size":        min_team,
     }, config=config)

@@ -28,6 +28,13 @@ class Wish(Base):
 
     # Raw input from PO
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Project planning fields (mandatory)
+    project_start_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    duration_months: Mapped[Optional[int]] = mapped_column(nullable=True)
+    total_hours: Mapped[Optional[int]] = mapped_column(nullable=True)
+    role_split: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # e.g. {"backend": {"hours": 168, "headcount": 2}, "frontend": {"hours": 84, "headcount": 1}}
     # e.g. "We need software for tuning speaker frequency response on embedded devices"
 
     status: Mapped[WishStatus] = mapped_column(
@@ -63,6 +70,13 @@ class Wish(Base):
 
     # Final matching results
     matched_candidates: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # Additional requirements (max 2) added by PO after initial results
+    additional_requirements: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # e.g. [
+    #   {"text": "We also need a UX designer with Figma", "candidates": [...], "label": "UX Designer"},
+    #   {"text": "Also need a DevOps engineer for AWS", "candidates": [...], "label": "DevOps"}
+    # ]
     # ranked list of employee IDs with scores and explanations
     # e.g. [{"employee_id": "uuid", "score": 0.91, "explanation": "...", "rank": 1}]
 

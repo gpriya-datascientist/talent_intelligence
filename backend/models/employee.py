@@ -46,7 +46,10 @@ class Employee(Base):
     github_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     github_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     github_stats: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    # e.g. {"total_commits": 340, "top_languages": ["Python", "TypeScript"], "active_repos": 5}
+
+    # POC Links — private GitLab, Confluence, portfolio etc
+    poc_links: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    # e.g. [{"title": "Talent Intelligence", "url": "gitlab.company.com/...", "type": "gitlab"}]
 
     # Extracted skill vector (raw JSON from extraction chain)
     extracted_skills: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)

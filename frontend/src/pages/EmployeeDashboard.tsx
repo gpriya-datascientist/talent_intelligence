@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { updateAvailability, getPendingSMEWishes, submitSMEInput, triggerSkillExtraction } from '../api'
+import { ParticleNetwork } from './PODashboard'
 
 const API = 'http://localhost:8000'
 
@@ -318,6 +319,13 @@ export default function EmployeeDashboard() {
   const [activeTab, setActiveTab]   = useState<'profile'|'sme'>('profile')
   const [resumeVersions, setResumeVersions] = useState<ResumeVersion[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+  const [pocLinks, setPocLinks]       = useState<any[]>([])
+  const [showPocForm, setShowPocForm] = useState(false)
+  const [pocTitle, setPocTitle]       = useState('')
+  const [pocUrl, setPocUrl]           = useState('https://')
+  const [pocType, setPocType]         = useState('gitlab')
+  const [pocDesc, setPocDesc]         = useState('')
+  const [pocSaving, setPocSaving]     = useState(false)
 
   useEffect(() => {
     const id = user.id || 'emp_demo'
@@ -328,6 +336,7 @@ export default function EmployeeDashboard() {
       if (emp) {
         setProfile(emp)
         setGithub(emp.github_username || '')
+        setPocLinks(emp.poc_links || [])
         // Build resume version history from profile
         if (emp.resume_text) {
           setResumeVersions([{
@@ -345,37 +354,83 @@ export default function EmployeeDashboard() {
 
   const save = async () => {
     const id = user.id || 'emp_demo'
-    await updateAvailability(id, { ...avail, github_username: github })
-    // Update GitHub username separately
-    if (github !== profile?.github_username) {
-      await fetch(`${API}/employees/${id}/github`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ github_username: github }),
-      }).catch(() => {})
+    try {
+      // Convert free_from_date to proper ISO format or null
+      const freeFromDate = avail.free_from_date
+        ? new Date(avail.free_from_date).toISOString()
+        : null
+
+      await updateAvailability(id, {
+        available_percentage: avail.available_percentage,
+        status: avail.status,
+        free_from_date: freeFromDate,
+        is_soft_open: avail.is_soft_open,
+        soft_open_note: avail.soft_open_note || null,
+        github_username: github || null,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (e) {
+      console.error('Save failed:', e)
+      alert('Failed to save. Check backend is running.')
     }
-    setSaved(true); setTimeout(() => setSaved(false), 2500)
   }
 
   const uploadResume = async () => {
     if (!resumeFile) return
     const id = user.id || 'emp_demo'
     setUploading(true)
-    const fd = new FormData(); fd.append('file', resumeFile)
-    await fetch(`${API}/employees/${id}/upload-resume`, { method: 'POST', body: fd })
+    try {
+      const fd = new FormData(); fd.append('file', resumeFile)
+      await fetch(`${API}/employees/${id}/upload-resume`, { method: 'POST', body: fd })
+      const label = `Resume v${resumeVersions.length + 1} — extracting skills...`
+      setResumeVersions(prev => [{
+        filename:    resumeFile.name,
+        uploaded_at: new Date().toISOString(),
+        skills_count: 0,
+        label,
+      }, ...prev])
+      setUploadDone(true)
+      setResumeFile(null)
+      // Poll for skills after 30 seconds
+      setTimeout(async () => {
+        const r = await fetch(`${API}/employees/${id}`)
+        if (r.ok) {
+          const emp = await r.json()
+          const count = emp.skills?.length || 0
+          setResumeVersions(prev => prev.map((v, i) =>
+            i === 0 ? { ...v, skills_count: count, label: `Resume v${resumeVersions.length + 1} — ${count} skills extracted` } : v
+          ))
+          setProfile(emp)
+        }
+      }, 35000)
+    } finally {
+      setUploading(false)
+      setTimeout(() => setUploadDone(false), 3000)
+    }
+  }
 
-    // Skills extracted in background — show done immediately
-    const label = `Resume v${resumeVersions.length + 1} — processing skills...`
-    setResumeVersions(prev => [{
-      filename:    resumeFile.name,
-      uploaded_at: new Date().toISOString(),
-      skills_count: 0,
-      label,
-    }, ...prev])
+  const addPocLink = async () => {
+    if (!pocTitle.trim() || !pocUrl.trim()) return
+    const id = user.id || 'emp_demo'
+    setPocSaving(true)
+    try {
+      const res = await fetch(`${API}/employees/${id}/poc-links`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: pocTitle, url: pocUrl, link_type: pocType, description: pocDesc })
+      })
+      const data = await res.json()
+      setPocLinks(data.poc_links || [])
+      setPocTitle(''); setPocUrl('https://'); setPocDesc(''); setShowPocForm(false)
+    } finally { setPocSaving(false) }
+  }
 
-    setUploading(false)
-    setUploadDone(true)
-    setResumeFile(null)
-    setTimeout(() => setUploadDone(false), 3000)
+  const removePocLink = async (index: number) => {
+    const id = user.id || 'emp_demo'
+    const res = await fetch(`${API}/employees/${id}/poc-links/${index}`, { method: 'DELETE' })
+    const data = await res.json()
+    setPocLinks(data.poc_links || [])
   }
 
   const logout = () => { localStorage.removeItem('ti_user'); navigate('/login') }
@@ -391,6 +446,7 @@ export default function EmployeeDashboard() {
 
   return (
     <div className="page min-h-screen">
+      <ParticleNetwork />
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid var(--border)', padding: '16px 32px',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -568,6 +624,107 @@ export default function EmployeeDashboard() {
               <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10 }}>
                 ℹ️ GitHub is synced automatically. Your repos are scanned for skills, topics, and README content.
               </p>
+            </div>
+
+            {/* POC Links */}
+            <div className="card fade-up-2">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.1em' }}>PROOF OF WORK LINKS</p>
+                {!showPocForm && (
+                  <button className="btn-secondary" style={{ padding: '6px 14px', fontSize: 11 }}
+                    onClick={() => setShowPocForm(true)}>+ Add Link</button>
+                )}
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.6 }}>
+                Link private GitLab, Confluence, portfolio or live demos.
+                Company work not on public GitHub still counts — <strong style={{ color: '#10b981' }}>boosts your ranking score!</strong>
+              </p>
+
+              {pocLinks.length > 0 && (
+                <div style={{ marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pocLinks.map((link: any, i: number) => (
+                    <div key={i} style={{ background: 'var(--surface2)', borderRadius: 10,
+                      padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span>{link.type === 'gitlab' ? '🦊' : link.type === 'github' ? '🐙' : link.type === 'confluence' ? '📋' : '🔗'}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600 }}>{link.title}</span>
+                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: 700 }}>POC VERIFIED</span>
+                        </div>
+                        <a href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                          target="_blank" rel="noreferrer"
+                          style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}>
+                          {link.url} ↗
+                        </a>
+                        {link.description && (
+                          <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{link.description}</p>
+                        )}
+                      </div>
+                      <button onClick={() => removePocLink(i)}
+                        style={{ fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none',
+                                 cursor: 'pointer', padding: '2px 8px', marginLeft: 8 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showPocForm && (
+                <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '14px', marginBottom: 8 }}>
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>TYPE</p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {[
+                        { value: 'gitlab',     label: '🦊 GitLab'    },
+                        { value: 'github',     label: '🐙 GitHub'    },
+                        { value: 'confluence', label: '📋 Confluence' },
+                        { value: 'portfolio',  label: '🌐 Portfolio'  },
+                        { value: 'demo',       label: '🚀 Live Demo'  },
+                        { value: 'other',      label: '🔗 Other'      },
+                      ].map(opt => (
+                        <button key={opt.value} onClick={() => setPocType(opt.value)}
+                          style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid',
+                            borderColor: pocType === opt.value ? 'var(--accent)' : 'var(--border)',
+                            background: pocType === opt.value ? 'rgba(59,130,246,0.15)' : 'var(--surface2)',
+                            color: pocType === opt.value ? '#93c5fd' : 'var(--muted)',
+                            fontFamily: 'Syne, sans-serif', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>PROJECT TITLE *</p>
+                    <input className="input" placeholder="e.g. Talent Intelligence Platform"
+                      value={pocTitle} onChange={e => setPocTitle(e.target.value)} />
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>URL *</p>
+                    <input className="input" placeholder="https://gitlab.company.com/your-project"
+                      value={pocUrl} onChange={e => setPocUrl(e.target.value)} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>DESCRIPTION (optional)</p>
+                    <textarea className="input" rows={2} style={{ resize: 'none', fontSize: 13 }}
+                      placeholder="e.g. Built LangChain RAG pipeline, FAISS vector store, FastAPI backend"
+                      value={pocDesc} onChange={e => setPocDesc(e.target.value)} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => { setShowPocForm(false); setPocTitle(''); setPocUrl('https://'); setPocDesc('') }}
+                      className="btn-secondary" style={{ padding: '10px 16px', flex: 1 }}>Cancel</button>
+                    <button onClick={addPocLink} disabled={pocSaving || !pocTitle.trim() || !pocUrl.trim()}
+                      className="btn-primary" style={{ flex: 2 }}>
+                      {pocSaving ? 'Saving...' : '+ Add Link'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {pocLinks.length === 0 && !showPocForm && (
+                <p style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '8px 0' }}>
+                  No proof of work links yet — add your company projects to boost your ranking!
+                </p>
+              )}
             </div>
 
             {/* Resume — versioned */}
