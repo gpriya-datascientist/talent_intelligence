@@ -491,6 +491,7 @@ async def _run_matching_stage(
             "is_backup":      bool(c.is_backup),
             "capacity_hours": getattr(c, 'capacity_hours', None),
             "start_date_ok":  getattr(c, 'start_date_ok', True),
+            "similar_profiles": getattr(c, 'similar_profiles', []),
         }
         for c in ranked
     ]

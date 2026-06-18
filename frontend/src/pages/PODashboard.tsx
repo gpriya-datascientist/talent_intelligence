@@ -71,6 +71,12 @@ interface Candidate {
   explanation?: string
   capacity_hours?: number
   start_date_ok?: boolean
+  similar_profiles?: Array<{
+    employee_id: string; full_name: string; title: string
+    overlap_pct: number; common_skills: string[]
+    available_percentage: number; free_from_date?: string
+    github_commits?: number
+  }>
 }
 interface WishResult {
   id: string; status: Status; parsed_intent?: string; detected_domains?: string[]
@@ -152,7 +158,7 @@ function CandidateCard({ c, index, isBackup }: { c: Candidate; index: number; is
               )}
               {isBackup && (
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                  background: 'rgba(251,146,60,0.2)', color: '#fb923c' }}>BACKUP</span>
+                  background: 'rgba(251,146,60,0.2)', color: '#fb923c' }}>ADDITIONAL</span>
               )}
             </div>
             <p style={{ fontSize: 13, color: 'var(--muted)' }}>{c.title} · {c.seniority_level}</p>
@@ -247,6 +253,53 @@ function CandidateCard({ c, index, isBackup }: { c: Candidate; index: number; is
                   background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>✓ GitHub Verified</span>
               )}
             </div>
+
+            {/* Similar profiles */}
+            {!isBackup && c.similar_profiles && c.similar_profiles.length > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)',
+                             letterSpacing: '0.08em', marginBottom: 8 }}>
+                  LIKE-FOR-LIKE REPLACEMENTS
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {c.similar_profiles.map((sp, i) => (
+                    <div key={i} style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 10,
+                      padding: '10px 12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <div>
+                          <span style={{ fontSize: 13, fontWeight: 700 }}>{sp.full_name}</span>
+                          <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 8 }}>{sp.title}</span>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                          background: 'rgba(139,92,246,0.2)', color: '#a78bfa' }}>
+                          {sp.overlap_pct}% match
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                        {sp.common_skills.map(s => (
+                          <span key={s} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 12,
+                            background: 'rgba(139,92,246,0.1)', color: '#a78bfa' }}>🔧 {s}</span>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11, color: Math.round(sp.available_percentage * 100) >= 60 ? '#10b981' : '#f59e0b' }}>
+                          {Math.round(sp.available_percentage * 100) >= 60 ? '🟢' : '🟡'} {Math.round(sp.available_percentage * 100)}% available
+                          {sp.free_from_date && ` · free ${new Date(sp.free_from_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
+                        </span>
+                        {(sp.github_commits ?? 0) > 0 && (
+                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                            ⚡ {sp.github_commits} commits
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 10, color: 'var(--muted)', marginTop: 8, fontStyle: 'italic' }}>
+                  If {c.full_name?.split(' ')[0]} is unavailable — these are your closest alternatives.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -623,7 +676,7 @@ export default function PODashboard() {
           <>
             <p className="fade-up" style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)',
                             letterSpacing: '0.1em', marginBottom: 12 }}>
-              BACKUP CANDIDATES ({backupCandidates.length})
+              ADDITIONAL CANDIDATES ({backupCandidates.length})
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {backupCandidates.map((c, i) => <CandidateCard key={c.employee_id} c={c} index={i} isBackup={true} />)}

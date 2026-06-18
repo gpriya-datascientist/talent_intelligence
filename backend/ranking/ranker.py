@@ -26,6 +26,7 @@ class RankedCandidate:
     start_date_ok:     bool = True
     capacity_score:    float = 1.0
     start_date_score:  float = 1.0
+    similar_profiles:  list = field(default_factory=list)
 
 
 async def rank_candidates_from_db(
@@ -175,18 +176,92 @@ async def rank_candidates_from_db(
 
     scored.sort(key=lambda x: x.final_score, reverse=True)
 
-    team_size   = min(requirements.get("team_size", 3), 3)  # cap at 3 primary
-    max_backup  = 3                                           # cap at 3 backup
+    team_size    = min(requirements.get("team_size", 3), 3)
+    max_backup   = 3
     backup_count = 0
-    final = []
+    final        = []
+    primary_ids  = set()
+
     for i, c in enumerate(scored):
         c.rank      = i + 1
         c.is_backup = i >= team_size
         if c.is_backup:
             if backup_count >= max_backup:
-                continue   # skip — already have 3 backups
+                continue
             backup_count += 1
+        else:
+            primary_ids.add(c.employee_id)
         final.append(c)
+
+    # ── Similar profiles for each primary candidate ───────────────────────
+    all_ranked_ids = {c.employee_id for c in final}
+
+    # Fetch ALL employees for similar profile matching
+    all_emps_result   = await db.execute(select(Employee))
+    all_emps_list     = all_emps_result.scalars().all()
+    all_skills_result = await db.execute(select(Skill))
+    all_skills_by_emp: dict[str, list] = {}
+    for s in all_skills_result.scalars().all():
+        all_skills_by_emp.setdefault(s.employee_id, []).append(s)
+    all_avails_result = await db.execute(select(Availability))
+    all_avails        = {a.employee_id: a for a in all_avails_result.scalars().all()}
+
+    # Build emp_data_map
+    emp_data_map: dict[str, dict] = {}
+    for emp in all_emps_list:
+        avail     = all_avails.get(emp.id)
+        avail_dict= {}
+        if avail:
+            avail_dict = {
+                "available_percentage": avail.available_percentage,
+                "free_from_date":       avail.free_from_date.isoformat() if avail.free_from_date else None,
+            }
+        emp_data_map[emp.id] = {
+            "emp":        emp,
+            "avail":      avail_dict,
+            "skills_objs": all_skills_by_emp.get(emp.id, []),
+        }
+
+    # Build skill name sets per employee
+    skill_map: dict[str, set] = {}
+    for emp_id, data in emp_data_map.items():
+        skill_map[emp_id] = {s.name.lower() for s in data["skills_objs"]}
+
+    for candidate in final:
+        if candidate.is_backup:
+            candidate.similar_profiles = []
+            continue
+        cand_skills = skill_map.get(candidate.employee_id, set())
+        if not cand_skills:
+            candidate.similar_profiles = []
+            continue
+
+        similar = []
+        for emp_id, data in emp_data_map.items():
+            if emp_id in all_ranked_ids:
+                continue
+            emp_skills = skill_map.get(emp_id, set())
+            if not emp_skills:
+                continue
+            overlap     = len(cand_skills & emp_skills)
+            overlap_pct = overlap / max(len(cand_skills), 1)
+            if overlap_pct >= 0.4:
+                emp       = data["emp"]
+                avail     = data["avail"]
+                avail_pct = avail.get("available_percentage", 1.0)
+                similar.append({
+                    "employee_id":          emp_id,
+                    "full_name":            emp.full_name,
+                    "title":                emp.title or "",
+                    "overlap_pct":          round(overlap_pct * 100),
+                    "common_skills":        [s.title() for s in list(cand_skills & emp_skills)[:4]],
+                    "available_percentage": avail_pct,
+                    "free_from_date":       avail.get("free_from_date"),
+                    "github_commits":       emp.github_stats.get("total_commits", 0) if emp.github_stats else 0,
+                })
+
+        similar.sort(key=lambda x: x["overlap_pct"], reverse=True)
+        candidate.similar_profiles = similar[:2]
 
     return final
 
